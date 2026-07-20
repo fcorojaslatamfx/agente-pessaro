@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { upsertPermissions } from "@/lib/content/admin-actions";
 import type { AiContentPermissions } from "@/lib/auth/permissions";
+import { Button } from "@/components/ui/Button";
 
 const FLAGS: { key: keyof AiContentPermissions; label: string }[] = [
   { key: "can_access_agent", label: "Acceso al módulo" },
@@ -49,27 +50,28 @@ export default function PermissionRow({
   }
 
   return (
-    <details className="rounded-lg border border-zinc-200 dark:border-zinc-800">
-      <summary className="cursor-pointer px-4 py-3 text-sm font-medium">
-        {name} <span className="text-xs text-zinc-500">({role})</span>
+    <details className="rounded-lg border border-border">
+      <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-foreground">
+        {name} <span className="text-xs text-muted-foreground">({role})</span>
       </summary>
-      <div className="grid grid-cols-2 gap-2 px-4 pb-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2 px-4 pb-4 sm:grid-cols-2 lg:grid-cols-3">
         {FLAGS.map(({ key, label }) => (
-          <label key={key} className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={flags[key]} onChange={() => toggle(key)} />
+          <label key={key} className="flex items-center gap-2 text-sm text-foreground">
+            <input
+              type="checkbox"
+              checked={flags[key]}
+              onChange={() => toggle(key)}
+              className="accent-primary"
+            />
             {label}
           </label>
         ))}
       </div>
       <div className="flex items-center gap-3 px-4 pb-4">
-        <button
-          onClick={handleSave}
-          disabled={pending}
-          className="rounded-md bg-zinc-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900"
-        >
+        <Button onClick={handleSave} disabled={pending} className="px-4 py-1.5">
           {pending ? "Guardando…" : "Guardar"}
-        </button>
-        {saved && <span className="text-sm text-emerald-600">Guardado ✓</span>}
+        </Button>
+        {saved && <span className="text-sm text-success">Guardado ✓</span>}
       </div>
     </details>
   );

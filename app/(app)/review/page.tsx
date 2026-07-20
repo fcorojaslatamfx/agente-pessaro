@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { requireAgentAccess } from "@/lib/auth/dal";
 import { createClient } from "@/lib/supabase/server";
+import { Card } from "@/components/ui/Card";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default async function ReviewInboxPage() {
   await requireAgentAccess();
@@ -14,29 +17,31 @@ export default async function ReviewInboxPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold">Bandeja de revisión</h1>
+      <h1 className="text-2xl font-semibold text-foreground">Bandeja de revisión</h1>
 
-      {error && <p className="text-sm text-red-600">{error.message}</p>}
+      {error && <p className="text-sm text-destructive">{error.message}</p>}
 
-      <div className="flex flex-col divide-y divide-zinc-200 rounded-lg border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
-        {(outputs ?? []).map((row) => (
-          <Link
-            key={row.id}
-            href={`/review/${row.id}`}
-            className="flex items-center justify-between px-4 py-3 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-900"
-          >
-            <span className="font-medium">
-              {(row.blog_seo_meta as { h1?: string } | null)?.h1 ?? "Sin título"}
-            </span>
-            <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-              {row.status}
-            </span>
-          </Link>
-        ))}
-        {(outputs ?? []).length === 0 && (
-          <p className="px-4 py-6 text-sm text-zinc-500">No hay contenido para revisar todavía.</p>
-        )}
-      </div>
+      {(outputs ?? []).length === 0 ? (
+        <EmptyState
+          title="No hay contenido para revisar todavía"
+          description="Los borradores generados aparecerán aquí."
+        />
+      ) : (
+        <Card className="flex flex-col divide-y divide-border p-0">
+          {(outputs ?? []).map((row) => (
+            <Link
+              key={row.id}
+              href={`/review/${row.id}`}
+              className="flex items-center justify-between gap-3 px-4 py-3 text-sm transition-colors hover:bg-secondary/40"
+            >
+              <span className="truncate font-medium text-foreground">
+                {(row.blog_seo_meta as { h1?: string } | null)?.h1 ?? "Sin título"}
+              </span>
+              <StatusBadge status={row.status} />
+            </Link>
+          ))}
+        </Card>
+      )}
     </div>
   );
 }

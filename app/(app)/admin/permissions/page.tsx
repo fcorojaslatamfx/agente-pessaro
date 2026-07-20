@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { requireAgentAccess } from "@/lib/auth/dal";
 import { createClient } from "@/lib/supabase/server";
 import type { AiContentPermissions } from "@/lib/auth/permissions";
+import { EmptyState } from "@/components/ui/EmptyState";
 import PermissionRow from "./PermissionRow";
 
 const EMPTY_FLAGS: AiContentPermissions = {
@@ -53,8 +54,8 @@ export default async function AdminPermissionsPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold">Permisos del AI Content Agent</h1>
-        <p className="text-sm text-zinc-500">
+        <h1 className="text-2xl font-semibold text-foreground">Permisos del AI Content Agent</h1>
+        <p className="text-sm text-muted-foreground">
           Los roles de `user_profiles`/`crm_staff_profiles` no se modifican aquí — estas casillas
           controlan capacidades adicionales del módulo (tabla `ai_content_permissions`).
         </p>
@@ -70,9 +71,7 @@ export default async function AdminPermissionsPage() {
             initial={permissionsByUser.get(c.userId) ?? EMPTY_FLAGS}
           />
         ))}
-        {candidates.length === 0 && (
-          <p className="text-sm text-zinc-500">No hay usuarios candidatos.</p>
-        )}
+        {candidates.length === 0 && <EmptyState title="No hay usuarios candidatos" />}
       </div>
     </div>
   );

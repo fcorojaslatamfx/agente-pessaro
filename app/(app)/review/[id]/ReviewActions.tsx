@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { transitionContent } from "@/lib/content/actions";
 import type { ContentStatus } from "@/lib/content/types";
+import { Button } from "@/components/ui/Button";
+import { Textarea } from "@/components/ui/Input";
 
 const LABELS: Record<ContentStatus, string> = {
   draft: "Guardar como borrador",
@@ -43,31 +45,25 @@ export default function ReviewActions({
   }
 
   if (transitions.length === 0) {
-    return <p className="text-sm text-zinc-500">No hay acciones disponibles para tu rol en este estado.</p>;
+    return <p className="text-sm text-muted-foreground">No hay acciones disponibles para tu rol en este estado.</p>;
   }
 
   return (
     <div className="flex flex-col gap-3">
-      <textarea
+      <Textarea
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
         placeholder="Notas de revisión (opcional)"
-        className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
         rows={2}
       />
       <div className="flex flex-wrap gap-2">
         {transitions.map((to) => (
-          <button
-            key={to}
-            onClick={() => handleTransition(to)}
-            disabled={pending !== null}
-            className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900"
-          >
+          <Button key={to} onClick={() => handleTransition(to)} disabled={pending !== null}>
             {pending === to ? "Procesando…" : LABELS[to]}
-          </button>
+          </Button>
         ))}
       </div>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
   );
 }

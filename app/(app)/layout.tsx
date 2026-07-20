@@ -16,18 +16,27 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   ];
 
   return (
-    <div className="flex min-h-full flex-1 flex-col">
-      <header className="border-b border-zinc-200 dark:border-zinc-800">
+    <div className="flex min-h-full flex-1 flex-col bg-background">
+      <header className="border-b border-border">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <span className="text-sm font-semibold">Pessaro AI Content Agent</span>
-          <nav className="flex gap-4 text-sm">
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-xs font-bold text-primary-foreground">
+              P
+            </div>
+            <span className="text-sm font-semibold text-foreground">Pessaro AI Content Agent</span>
+          </Link>
+          <nav className="flex gap-5 text-sm">
             {navItems.map((item) => (
-              <Link key={item.href} href={item.href} className="text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-zinc-50">
+              <Link
+                key={item.href}
+                href={item.href}
+                className="text-muted-foreground transition-colors hover:text-foreground"
+              >
                 {item.label}
               </Link>
             ))}
           </nav>
-          <div className="flex items-center gap-3 text-sm text-zinc-500">
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
             <span>{profile.displayName ?? session.email}</span>
             <SignOutButton />
           </div>

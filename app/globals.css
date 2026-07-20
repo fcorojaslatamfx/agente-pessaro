@@ -1,26 +1,83 @@
 @import "tailwindcss";
 
+/*
+ * Tokens ported from the live computed styles of pessaro.cl (shadcn/ui +
+ * OKLCH). Do not restore the old navy #0d2350 / blue #2563EB values from
+ * AGENTS.md/README.md — those predate this palette and are no longer what
+ * the parent brand site actually uses.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: oklch(14% 0.03 255);
+  --foreground: oklch(94% 0.01 250);
+  --card: oklch(19% 0.035 255);
+  --card-foreground: oklch(94% 0.01 250);
+  --popover: oklch(17% 0.035 255);
+  --popover-foreground: oklch(94% 0.01 250);
+  --primary: oklch(57% 0.19 288);
+  --primary-foreground: oklch(98% 0.01 0);
+  --secondary: oklch(24% 0.045 255);
+  --secondary-foreground: oklch(94% 0.01 250);
+  --muted: oklch(19% 0.035 255);
+  --muted-foreground: oklch(69% 0.02 250);
+  --accent: oklch(47% 0.22 289);
+  --accent-foreground: oklch(98% 0.01 0);
+  --destructive: oklch(63% 0.22 25);
+  --destructive-foreground: oklch(98% 0.01 15);
+  --border: oklch(94% 0.01 250 / 0.08);
+  --input: oklch(24% 0.045 255);
+  --ring: oklch(57% 0.19 288);
+  --radius: 0.625rem;
+
+  --navy-950: #070c16;
+  --navy-900: #0a1628;
+  --navy-800: #101d34;
+  --navy-700: #182746;
+  --navy-600: #22345c;
+  --gold: #d4a656;
+  --gold-light: #e8c374;
+  --success: #00d084;
+  --warning: #d4a656;
+  --danger: #ff4757;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-navy-950: var(--navy-950);
+  --color-navy-900: var(--navy-900);
+  --color-navy-800: var(--navy-800);
+  --color-navy-700: var(--navy-700);
+  --color-navy-600: var(--navy-600);
+  --color-gold: var(--gold);
+  --color-gold-light: var(--gold-light);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+  --font-sans: var(--font-plus-jakarta-sans);
+  --font-mono: var(--font-jetbrains-mono);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
 }

@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/Button";
+import { Input, Label } from "@/components/ui/Input";
+import { Card } from "@/components/ui/Card";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -34,54 +37,49 @@ export default function LoginForm() {
   }
 
   return (
-    <div className="w-full max-w-sm rounded-lg border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
-      <h1 className="mb-1 text-xl font-semibold">Pessaro AI Content Agent</h1>
-      <p className="mb-6 text-sm text-zinc-500">
-        Inicia sesión con tu cuenta del CRM de Pessaro.
-      </p>
+    <Card className="w-full max-w-sm p-8 shadow-lg shadow-black/20">
+      <div className="mb-6 flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">
+          P
+        </div>
+        <div>
+          <h1 className="text-lg font-semibold text-foreground">Pessaro AI Content Agent</h1>
+          <p className="text-xs text-muted-foreground">Inicia sesión con tu cuenta del CRM de Pessaro.</p>
+        </div>
+      </div>
 
       {noAccess && (
-        <p className="mb-4 rounded-md bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+        <p className="mb-4 rounded-md border border-gold/30 bg-gold/10 p-3 text-sm text-gold-light">
           Tu cuenta no tiene acceso a este módulo. Contacta a un super admin.
         </p>
       )}
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div>
-          <label className="mb-1 block text-sm font-medium" htmlFor="email">
-            Email
-          </label>
-          <input
+          <Label htmlFor="email">Email</Label>
+          <Input
             id="email"
             type="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium" htmlFor="password">
-            Contraseña
-          </label>
-          <input
+          <Label htmlFor="password">Contraseña</Label>
+          <Input
             id="password"
             type="password"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
           />
         </div>
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <button
-          type="submit"
-          disabled={pending}
-          className="mt-2 rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900"
-        >
+        {error && <p className="text-sm text-destructive">{error}</p>}
+        <Button type="submit" disabled={pending} className="mt-2 w-full">
           {pending ? "Ingresando…" : "Ingresar"}
-        </button>
+        </Button>
       </form>
-    </div>
+    </Card>
   );
 }

@@ -4,6 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { submitGenerationRequest } from "@/lib/content/actions";
 import type { GenerationInput } from "@/lib/content/types";
+import { Button } from "@/components/ui/Button";
+import { Input, Label, Select } from "@/components/ui/Input";
+import { Card } from "@/components/ui/Card";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 const PLATFORMS = ["LinkedIn", "Instagram", "Facebook"];
 
@@ -47,92 +51,72 @@ export default function GenerateForm() {
     router.push("/review");
   }
 
+  if (pending) {
+    return (
+      <Card className="flex flex-col gap-4">
+        <p className="text-sm text-muted-foreground">
+          Generando borrador — investigando fuentes y redactando blog, LinkedIn, Instagram, Facebook
+          y brief visual. Esto puede tardar unos segundos…
+        </p>
+        <Skeleton className="h-6 w-2/3" />
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-16 w-5/6" />
+      </Card>
+    );
+  }
+
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       <div>
-        <label className="mb-1 block text-sm font-medium" htmlFor="topic">
-          Tema *
-        </label>
-        <input
+        <Label htmlFor="topic">Tema *</Label>
+        <Input
           id="topic"
           name="topic"
           required
-          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
           placeholder="Ej: Impacto de la política de tasas de la Fed en carteras diversificadas"
         />
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-medium" htmlFor="objective">
-          Objetivo
-        </label>
-        <input
-          id="objective"
-          name="objective"
-          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-        />
+        <Label htmlFor="objective">Objetivo</Label>
+        <Input id="objective" name="objective" />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
-          <label className="mb-1 block text-sm font-medium" htmlFor="audience">
-            Audiencia
-          </label>
-          <input
-            id="audience"
-            name="audience"
-            className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-          />
+          <Label htmlFor="audience">Audiencia</Label>
+          <Input id="audience" name="audience" />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium" htmlFor="tone">
-            Tono
-          </label>
-          <input
-            id="tone"
-            name="tone"
-            className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-          />
+          <Label htmlFor="tone">Tono</Label>
+          <Input id="tone" name="tone" />
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
-          <label className="mb-1 block text-sm font-medium" htmlFor="content_type">
-            Tipo de contenido
-          </label>
-          <input
-            id="content_type"
-            name="content_type"
-            placeholder="post educativo, análisis, carrusel…"
-            className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-          />
+          <Label htmlFor="content_type">Tipo de contenido</Label>
+          <Input id="content_type" name="content_type" placeholder="post educativo, análisis, carrusel…" />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium" htmlFor="platform_primary">
-            Plataforma principal
-          </label>
-          <select
-            id="platform_primary"
-            name="platform_primary"
-            defaultValue="LinkedIn"
-            className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-          >
+          <Label htmlFor="platform_primary">Plataforma principal</Label>
+          <Select id="platform_primary" name="platform_primary" defaultValue="LinkedIn">
             {PLATFORMS.map((p) => (
               <option key={p} value={p}>
                 {p}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       </div>
 
       <fieldset>
-        <legend className="mb-1 text-sm font-medium">Plataformas secundarias</legend>
-        <div className="flex gap-4">
+        <legend className="mb-1 text-sm font-medium text-foreground">Plataformas secundarias</legend>
+        <div className="flex flex-wrap gap-4">
           {PLATFORMS.map((p) => (
-            <label key={p} className="flex items-center gap-2 text-sm">
-              <input type="checkbox" name="platforms_secondary" value={p} />
+            <label key={p} className="flex items-center gap-2 text-sm text-foreground">
+              <input type="checkbox" name="platforms_secondary" value={p} className="accent-primary" />
               {p}
             </label>
           ))}
@@ -140,42 +124,31 @@ export default function GenerateForm() {
       </fieldset>
 
       <div>
-        <label className="mb-1 block text-sm font-medium" htmlFor="visibility_scope">
-          Alcance de visibilidad
-        </label>
-        <select
-          id="visibility_scope"
-          name="visibility_scope"
-          defaultValue="own"
-          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-        >
+        <Label htmlFor="visibility_scope">Alcance de visibilidad</Label>
+        <Select id="visibility_scope" name="visibility_scope" defaultValue="own">
           <option value="own">Solo yo</option>
           <option value="team">Mi equipo</option>
           <option value="company">Compañía</option>
-        </select>
+        </Select>
       </div>
 
       <div className="flex flex-col gap-3">
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" name="needs_image" />
+        <label className="flex items-center gap-2 text-sm text-foreground">
+          <input type="checkbox" name="needs_image" className="accent-primary" />
           Necesita imagen / brief visual
         </label>
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" name="compliance_required" defaultChecked />
+        <label className="flex items-center gap-2 text-sm text-foreground">
+          <input type="checkbox" name="compliance_required" defaultChecked className="accent-primary" />
           Requiere validación de compliance financiero
         </label>
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      {success && <p className="text-sm text-emerald-600">Borrador generado.</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
+      {success && <p className="text-sm text-success">Borrador generado.</p>}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="self-start rounded-md bg-zinc-900 px-5 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900"
-      >
+      <Button type="submit" disabled={pending} className="self-start px-5">
         {pending ? "Generando…" : "Generar borrador"}
-      </button>
+      </Button>
     </form>
   );
 }

@@ -30,10 +30,29 @@ export type ContentAgentOutput = {
     hashtags: string[];
   };
   design_brief: {
-    idea_visual: string;
-    paleta: string;
+    concepto_creativo: string;
+    composicion: string;
+    estilo_visual: string;
+    tipografia: string;
+    paleta: {
+      primario: string;
+      acento: string;
+      complementarios: string;
+      proporcion: string;
+    };
     texto_grafica: string;
-    medidas: { linkedin: string; instagram: string; facebook: string };
+    elementos_graficos: string;
+    que_evitar: string;
+    prompt_leonardo: string;
+    formatos: {
+      linkedin_feed: string;
+      linkedin_carrusel: string;
+      instagram_feed: string;
+      instagram_stories_reels: string;
+      facebook_feed: string;
+      blog_hero: string;
+    };
+    formato_principal: string;
   };
   version_marca_personal: {
     instrucciones: string;
