@@ -1,14 +1,19 @@
 import { notFound } from "next/navigation";
 import { requireAgentAccess } from "@/lib/auth/dal";
 import { createClient } from "@/lib/supabase/server";
-import { availableTransitions, type OutputRow } from "@/lib/content/transitions";
+import { availableTransitions, canPublishSocial, type OutputRow } from "@/lib/content/transitions";
 import { personalizeCopy } from "@/lib/content/personalize";
+import { getVisibleSocialConnections } from "@/lib/content/social-actions";
 import type { ContentAgentOutput } from "@/lib/content/types";
+import type { PublishablePlatform } from "@/lib/content/publish-actions";
 import { Card, SectionTitle } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import CopyButton from "./CopyButton";
 import ReviewActions from "./ReviewActions";
 import ImageGenerator from "./ImageGenerator";
+import PublishActions, { type PlatformPublishState } from "./PublishActions";
+
+const PUBLISHABLE_PLATFORMS: PublishablePlatform[] = ["linkedin", "instagram", "facebook_page"];
 
 export default async function ReviewDetailPage({
   params,
@@ -27,7 +32,7 @@ export default async function ReviewDetailPage({
 
   if (!output) notFound();
 
-  const [{ data: ownerProfile }, { data: assets }] = await Promise.all([
+  const [{ data: ownerProfile }, { data: assets }, { data: publications }, connections] = await Promise.all([
     supabase
       .from("crm_staff_profiles")
       .select("display_name")
@@ -38,6 +43,12 @@ export default async function ReviewDetailPage({
       .select("id, image_url")
       .eq("output_id", output.id)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("ai_content_publications")
+      .select("platform, status, error_message, created_at")
+      .eq("output_id", output.id)
+      .order("created_at", { ascending: false }),
+    getVisibleSocialConnections(),
   ]);
 
   const payload = output.crm_payload as ContentAgentOutput;
@@ -48,6 +59,26 @@ export default async function ReviewDetailPage({
     status: output.status,
   };
   const transitions = availableTransitions(session.profile, row);
+  const canPublish =
+    ["ready_to_publish", "published"].includes(output.status) && canPublishSocial(session.profile, row);
+
+  const publishPlatforms: PlatformPublishState[] = PUBLISHABLE_PLATFORMS.map((platform) => {
+    const isCorporate = platform === "facebook_page";
+    const connected = (connections ?? []).some(
+      (c) =>
+        c.platform === platform &&
+        c.status === "active" &&
+        !!c.postiz_integration_id &&
+        (isCorporate ? c.user_id === null : c.user_id === session.userId),
+    );
+    const lastPublication = publications?.find((p) => p.platform === platform);
+    return {
+      platform,
+      connected,
+      lastStatus: (lastPublication?.status as "pending" | "published" | "failed" | undefined) ?? null,
+      lastError: lastPublication?.error_message ?? null,
+    };
+  });
 
   const personalCopy = personalizeCopy(
     payload.version_marca_personal?.copy_personalizable ?? "",
@@ -78,6 +109,13 @@ export default async function ReviewDetailPage({
         <SectionTitle className="mb-3">Acciones</SectionTitle>
         <ReviewActions outputId={output.id} transitions={transitions} />
       </Card>
+
+      {canPublish && (
+        <Card>
+          <SectionTitle className="mb-3">Publicar en RRSS (vía Postiz)</SectionTitle>
+          <PublishActions outputId={output.id} platforms={publishPlatforms} />
+        </Card>
+      )}
 
       <Card className="flex flex-col gap-2">
         <SectionTitle>Blog (SEO)</SectionTitle>

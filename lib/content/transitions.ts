@@ -19,6 +19,15 @@ const isTeamReviewer = (profile: Profile, output: OutputRow) =>
   profile.teamId === output.team_id;
 const isSuperAdmin = (profile: Profile) => profile.isSuperAdmin;
 
+// Misma regla que gobierna ready_to_publish -> published (abajo), expuesta
+// aparte porque lib/content/publish-actions.ts la reutiliza: ahí el output
+// puede quedarse en "published" tras el primer canal enviado y el usuario
+// igual debe poder disparar el envío a otras plataformas.
+export const canPublishSocial = (profile: Profile, output: OutputRow) =>
+  (isOwner(profile, output) && profile.permissions.can_publish_own_social) ||
+  profile.permissions.can_publish_company_social ||
+  isSuperAdmin(profile);
+
 // Approval flow (section 5): pending_review -> [team_review] -> super_admin_review -> approved/ready_to_publish.
 const RULES: Record<ContentStatus, TransitionRule[]> = {
   draft: [{ to: "pending_review", allowed: (p, o) => isOwner(p, o) && p.permissions.can_submit_for_review }],
@@ -41,15 +50,7 @@ const RULES: Record<ContentStatus, TransitionRule[]> = {
   ],
   changes_requested: [{ to: "pending_review", allowed: (p, o) => isOwner(p, o) }],
   approved: [{ to: "ready_to_publish", allowed: (p) => isSuperAdmin(p) }],
-  ready_to_publish: [
-    {
-      to: "published",
-      allowed: (p, o) =>
-        (isOwner(p, o) && p.permissions.can_publish_own_social) ||
-        p.permissions.can_publish_company_social ||
-        isSuperAdmin(p),
-    },
-  ],
+  ready_to_publish: [{ to: "published", allowed: canPublishSocial }],
   rejected: [],
   published: [{ to: "archived", allowed: (p) => isSuperAdmin(p) }],
   archived: [],

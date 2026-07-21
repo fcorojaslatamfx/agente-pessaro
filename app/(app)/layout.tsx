@@ -12,6 +12,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     { href: "/review", label: "Revisión" },
     { href: "/history", label: "Historial" },
     { href: "/calendar", label: "Calendario" },
+    { href: "/settings/connections", label: "Conexiones" },
     ...(profile.isSuperAdmin ? [{ href: "/admin/permissions", label: "Permisos" }] : []),
   ];
 
@@ -30,7 +31,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               <Link
                 key={item.href}
                 href={item.href}
-                className="text-muted-foreground transition-colors hover:text-foreground"
+                className="nav-link text-muted-foreground transition-colors hover:text-foreground"
               >
                 {item.label}
               </Link>
