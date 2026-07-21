@@ -87,3 +87,53 @@ confundirse con credenciales reales:
 Las tablas `ai_content_social_connections`/`ai_content_publications` y sus
 políticas RLS ya existen en producción (migraciones `0006`/`0007`), listas
 para cuando lleguen estas credenciales.
+
+- ~~**App de Meta + App Review**~~ / ~~**LinkedIn Marketing Developer
+  Platform**~~: **superados por la decisión de Fase 2.B (ver abajo)**.
+  Postiz Cloud ya tiene sus propias apps de Meta/LinkedIn aprobadas —
+  agente-pessaro ya no necesita registrar las suyas ni pasar App Review.
+
+## Fase 2.B — Publicación vía Postiz Cloud
+
+Implementado (ver `meta_prompt_fase2b_postiz_ux.md` para el detalle de
+diseño): `lib/postiz/*` (cliente, integraciones, publicación, verificación
+de estado), `lib/content/social-actions.ts` y `lib/content/publish-actions.ts`,
+la página `/settings/connections`, y el bloque "Publicar en RRSS" en
+`/review/[id]` cuando el contenido está `ready_to_publish`/`published`.
+Migración `0008` (aditiva) ya aplicada en producción: agrega
+`postiz_integration_id` a `ai_content_social_connections` y marca como
+deprecados los campos de token crudo de la migración 0006 (Postiz custodia
+el token real, no nosotros).
+
+**Pendientes de Francisco para activar el flujo real:**
+
+1. **Cuenta de Postiz Cloud**: crear cuenta en postiz.com (u organización
+   existente), revisar sus términos comerciales (aplican al usar su nube en
+   vez de self-host).
+2. **API key**: generarla desde el panel de Postiz Cloud y agregar
+   `POSTIZ_API_KEY` en Vercel (Production y Preview) y en `.env.local` para
+   desarrollo. Sin esto, `/settings/connections` y "Publicar ahora" responden
+   con un error claro de configuración en vez de fallar oscuro
+   (`PostizNotConfiguredError`, ver `lib/postiz/client.ts`).
+3. **Conectar las cuentas sociales en Postiz** (no en agente-pessaro): cada
+   asesor conecta su LinkedIn personal desde el panel de Postiz Cloud;
+   Francisco (o quien administre la cuenta corporativa) conecta la Página de
+   Facebook e Instagram Business. El OAuth ocurre 100% del lado de Postiz.
+4. **Vincular el canal al usuario del agente**: una vez conectado en Postiz,
+   cada asesor entra a `/settings/connections` en agente-pessaro y hace clic
+   en "Vincular a mi cuenta" sobre su canal — eso guarda el
+   `postiz_integration_id`. La Página de Facebook la vincula un
+   `super_admin` como conexión corporativa (`user_id` null).
+5. **Verificar el primer post real**: usar `GET /api/postiz/test-connection`
+   (super_admin) para confirmar que la API key lista los canales, y luego
+   probar "Publicar ahora" con un borrador de prueba antes de anunciarlo al
+   equipo.
+
+**Nota de diseño no trivial**: la respuesta de `POST /public/v1/posts` en
+Postiz solo entrega su `postId` interno — la publicación real corre async
+vía su orquestador (Temporal), así que `ai_content_publications.status`
+queda en `'pending'` justo después del clic, no `'published'`. El estado
+real (URL final, error de la plataforma) se resuelve con
+`lib/postiz/status.ts::checkPostizPostStatus()`; todavía no hay una UI que
+lo llame automáticamente — es el primer candidato de mejora de esta fase si
+se necesita confirmación visible sin ir al panel de Postiz.
