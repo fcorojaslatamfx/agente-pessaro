@@ -1,119 +1,148 @@
 # Pessaro AI Content Agent
 
-Fase 1 (MVP): generación de borradores de contenido financiero/geopolítico
-(blog SEO + LinkedIn + Instagram + Facebook + brief visual) vía Claude, con
-flujo de aprobación editorial por roles. Ver
-`meta_prompt_claude_code_ai_content_agentv1.1.md` para la especificación
-completa del producto.
+Aplicación web que genera borradores de contenido financiero/geopolítico para
+Pessaro Capital (blog SEO + LinkedIn + Instagram + Facebook, con brief visual
+y generación de imágenes por IA) a través de Claude, con un flujo de
+aprobación editorial por roles antes de publicar. Nació como un proyecto
+Next.js independiente (deploy propio en `agente.pessaro.cl`) pero comparte
+desde el día uno la base de datos y el sistema de autenticación de
+producción del CRM de Pessaro (`pessaro_CL`, proyecto Supabase
+`ldlflxujrjihiybrcree`) — no hay usuarios ni esquema propios que migrar.
 
-## Stack
+El proyecto avanzó por fases: la Fase 1 (MVP) cubre generación, revisión y
+aprobación manual; la Fase 2 sumó un `design_brief` de nivel director de
+arte, generación de imágenes con Leonardo.ai y un rediseño de UX alineado a
+la identidad visual de `pessaro.cl`; la Fase 2.B (la más reciente) conecta
+la publicación real en redes sociales a través de **Postiz Cloud**. El
+detalle funcional completo de cada fase vive en los `meta_prompt_*.md` de
+este repo.
 
-- Next.js 16 (App Router) + TypeScript
-- Supabase (Postgres + RLS + Auth) — **comparte el proyecto de producción del
-  CRM de Pessaro** (`ldlflxujrjihiybrcree`)
-- Anthropic API (Claude) para generación de contenido
-- Supabase Cron (`pg_cron` + `pg_net`) para la generación semanal automática
-- Deploy: Vercel
+## Stack tecnológico
 
-## ⚠️ Reglas de seguridad sobre la base de datos
+- **Next.js 16** (App Router) + **React 19** + **TypeScript**
+- **Tailwind CSS 4**
+- **Supabase** (Postgres + RLS + Auth) — proyecto de producción compartido
+  con el CRM de Pessaro, no uno propio
+- **Anthropic API (Claude)** — generación de contenido (`@anthropic-ai/sdk`)
+- **Leonardo.ai** — generación de imágenes a partir del `design_brief`
+- **Postiz Cloud** — publicación en LinkedIn/Instagram/Facebook (ver más abajo)
+- **Supabase Cron** (`pg_cron` + `pg_net`) — generación semanal automática de borradores
+- Deploy: **Vercel**
 
-Este proyecto Supabase es **producción viva** (~90 tablas con datos reales
-del CRM, WhatsApp, campañas, educación). Todo lo que vive en `supabase/migrations/`
-sigue estas reglas sin excepción:
+## Estructura de carpetas clave
 
-- Solo migraciones **aditivas**: `create table if not exists`, `create
-  policy`, `create function`. Nunca `alter`, `drop`, `truncate` ni `update`
-  sobre tablas existentes del CRM.
-- Todas las tablas nuevas usan el prefijo `ai_content_` y tienen RLS
-  habilitado desde su primera migración.
-- `user_profiles`, `crm_teams`, `crm_staff_profiles` y `auth.users` son
-  **solo lectura** desde este proyecto — nunca se les agregan columnas ni se
-  escriben roles nuevos ahí. Toda capacidad del agente vive en la tabla
-  nueva `ai_content_permissions` (ver sección 4 del meta-prompt para el
-  mapeo de roles reales de producción).
-- Antes de aplicar una migración nueva a producción, pruébala primero en una
-  rama de desarrollo de Supabase (`supabase branches create` o el MCP
-  `create_branch`).
-
-## Setup local
-
-1. `npm install`
-2. Copia `.env.local.example` a `.env.local` y completa las claves:
-   - `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY`: del
-     proyecto `ldlflxujrjihiybrcree` ("Website 2026").
-   - `SUPABASE_SERVICE_ROLE_KEY`: solo servidor, usada por el cron. Nunca la
-     prefijes con `NEXT_PUBLIC_`.
-   - `ANTHROPIC_API_KEY`: clave de la API de Anthropic.
-   - `CRON_SECRET`: string aleatorio (`openssl rand -base64 32`), compartido
-     con el job de `pg_cron`.
-3. `npm run dev` y abre `http://localhost:3000`.
-
-Necesitas iniciar sesión con un usuario real que ya exista en
-`auth.users` del CRM (no hay registro propio — la autenticación se reutiliza
-100%). Para que un usuario vea el módulo, un `super_admin` debe activarle
-`can_access_agent` en **Permisos** (`/admin/permissions`).
-
-## Estructura relevante
-
-- `lib/supabase/{server,client,admin}.ts` — clientes Supabase (SSR, browser,
-  service-role).
-- `lib/auth/{dal,permissions}.ts` — verificación de sesión y resolución de
-  permisos sobre el vocabulario real de roles de producción.
-- `lib/anthropic/` — cliente Claude, system prompt (constante, sección 7 del
-  meta-prompt) y parseo de la respuesta JSON con reintento.
-- `lib/compliance/validate.ts` — validación de compliance del lado del
-  servidor (sección 12) — nunca confía solo en el `compliance` autoreportado
-  por el modelo.
-- `lib/content/` — tipos, máquina de estados de aprobación
-  (`transitions.ts`), Server Actions (`actions.ts`, `admin-actions.ts`) y el
-  flujo de generación compartido entre el formulario manual y el cron
-  (`generate-flow.ts`).
-- `proxy.ts` — refresco de sesión Supabase (Next.js 16 renombró
-  `middleware.ts` a `proxy.ts`; ver
-  `node_modules/next/dist/docs/01-app/02-guides/upgrading/version-16.md`).
-- `supabase/migrations/` — las 5 migraciones aditivas de `ai_content_*`.
-
-## Cron semanal (pg_cron)
-
-El Route Handler `app/api/cron/generate-weekly-drafts/route.ts` genera un
-borrador por cada asesor con `ai_content_permissions.can_generate_content =
-true`. Está protegido por comparación timing-safe del header `Authorization:
-Bearer <CRON_SECRET>`.
-
-**Después de desplegar** (se necesita una URL real, no se puede programar
-antes), habilita el job en `pg_cron` desde el SQL editor de Supabase o vía
-MCP:
-
-```sql
-select cron.schedule(
-  'weekly-ai-content-drafts',
-  '30 11 * * 1', -- 08:30 America/Santiago ≈ 11:30 UTC — verificar el offset vigente (Chile tiene horario de verano)
-  $$
-  select net.http_post(
-    url := 'https://agente.pessaro.cl/api/cron/generate-weekly-drafts',
-    headers := jsonb_build_object('Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'CRON_SECRET'))
-  );
-  $$
-);
+```
+app/
+  (app)/            páginas protegidas: dashboard, generate, review/[id],
+                     history, calendar, settings/connections, admin/permissions
+  api/
+    generate/            genera un borrador de contenido (Claude)
+    generate-image/      genera la imagen del brief (Leonardo.ai)
+    cron/generate-weekly-drafts/   job semanal protegido por CRON_SECRET
+    postiz/test-connection/        healthcheck de la integración con Postiz
+  login/
+components/ui/       Button, Card, Input, StatusBadge, Skeleton, EmptyState
+lib/
+  supabase/{server,client,admin}.ts   clientes Supabase (SSR/browser/service-role)
+  auth/{dal,permissions}.ts           sesión y permisos sobre roles reales del CRM
+  anthropic/                          cliente Claude + system prompt + parseo de salida
+  leonardo/                           cliente y generación de imágenes
+  postiz/                             cliente, integraciones, publicación, verificación de estado
+  content/                            tipos, máquina de estados de aprobación, Server Actions
+  compliance/validate.ts              validación de compliance server-side
+proxy.ts             refresco de sesión Supabase (reemplaza a middleware.ts en Next 16)
+supabase/migrations/ 8 migraciones aditivas `ai_content_*` (permisos, requests,
+                     outputs, assets, calendar, conexiones sociales, publicaciones,
+                     mapeo a Postiz)
 ```
 
-Guarda `CRON_SECRET` en Supabase Vault con ese mismo nombre, y en las
-variables de entorno de Vercel.
+## Cómo correr en desarrollo
 
-**Caveat de duración**: con ~7 asesores generando secuencialmente, el job
-puede acercarse al límite de 60s de Vercel Hobby. La ruta ya declara
-`export const maxDuration = 300`, pero eso solo tiene efecto en planes que lo
-permiten (Pro o superior). Si el número de asesores crece, considera batchear
-o mover a un plan que soporte funciones más largas.
+```bash
+npm install
+cp .env.local.example .env.local   # completar variables, ver sección de abajo
+npm run dev                        # http://localhost:3000
+```
 
-**Monitoreo**: como Supabase Cron no tiene reintentos ni alertas nativas, el
-panel (`/dashboard`) muestra una alerta a los `super_admin` si no se detectó
-ningún borrador `source='cron'` para la semana en curso pasada la ventana de
-revisión (09:30 hrs).
+Otros scripts disponibles: `npm run build`, `npm run start`, `npm run lint`.
 
-## Flujo de aprobación
+No hay registro propio: hace falta iniciar sesión con un usuario real que ya
+exista en `auth.users` del CRM, y un `super_admin` debe activarle
+`can_access_agent` desde **Permisos** (`/admin/permissions`) para que el
+módulo sea visible.
 
-Ver `lib/content/transitions.ts` para la máquina de estados completa
-(sección 5 del meta-prompt). RLS controla *quién* puede tocar cada fila;
-la legalidad de cada transición de estado se valida en la Server Action
-antes de emitir el `UPDATE` (doble validación exigida en la sección 4).
+### ⚠️ Regla no negociable sobre la base de datos
+
+El proyecto Supabase (`ldlflxujrjihiybrcree`) es **producción viva** del CRM
+(~90 tablas con datos reales de clientes, WhatsApp, campañas). Toda migración
+en `supabase/migrations/` debe ser **aditiva únicamente**
+(`create table if not exists`, `create policy`, `create function`) — nunca
+`alter`/`drop`/`truncate`/`update` sobre tablas existentes del CRM. Las
+tablas nuevas usan siempre el prefijo `ai_content_` con RLS habilitado desde
+su primera migración, y `user_profiles`/`crm_teams`/`crm_staff_profiles`/
+`auth.users` son de solo lectura desde este repo.
+
+## Integraciones externas
+
+- **Anthropic (Claude)** — motor de generación de texto del borrador
+  (blog/LinkedIn/Instagram/Facebook + brief visual). Cliente en
+  `lib/anthropic/`.
+- **Leonardo.ai** — genera la imagen real a partir del `design_brief`, vía el
+  botón "Generar con IA" en `/review/[id]`. Requiere `LEONARDO_API_KEY` y
+  `LEONARDO_MODEL_ID`.
+- **Postiz Cloud** — publica el contenido aprobado en LinkedIn, Instagram y
+  Facebook sin que este proyecto custodie tokens OAuth (Postiz los guarda;
+  aquí solo se persiste el `integration.id` por asesor/plataforma). Flujo:
+  conectar cuentas en el panel de Postiz → vincularlas en
+  `/settings/connections` → "Publicar ahora" en `/review/[id]`. El detalle de
+  arquitectura, endpoints usados y los pasos pendientes para activarlo en
+  producción están en **`INTEGRATION.md`** (no se duplican aquí).
+- **CRM de Pessaro (`pessaro_CL`)** — no es una integración por API sino de
+  base de datos: mismo proyecto Supabase y mismo `auth.users`. `INTEGRATION.md`
+  también documenta cómo se embebería este módulo dentro del CRM más adelante.
+
+## Estado actual / en desarrollo
+
+Según el historial reciente, la Fase 2.B (publicación en RRSS vía Postiz)
+está implementada de punta a punta:
+
+- Publicación end-to-end funcionando contra Postiz Cloud (cliente,
+  integraciones, Server Actions de publicación, verificación de estado).
+- Migración `0008` aplicada: mapeo de conexiones sociales al
+  `integration.id` de Postiz.
+- Tokens y efectos de marca (colores, tipografía, animaciones hover) portados
+  desde `pessaro_CL` a los componentes UI compartidos (`Card`, `Button`, nav).
+- `INTEGRATION.md` actualizado para reflejar que Postiz Cloud ya trae sus
+  propias apps de Meta/LinkedIn aprobadas, eliminando la necesidad de que
+  este proyecto pase su propio App Review.
+
+**Pendiente (bloqueado en pasos manuales de Francisco, no de código):** crear
+la cuenta de Postiz Cloud, generar su API key, conectar ahí las cuentas
+sociales reales y vincularlas en `/settings/connections`. Ver el detalle paso
+a paso en `INTEGRATION.md`.
+
+## Variables de entorno
+
+Definidas en `.env.local.example`:
+
+| Variable | Uso |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Proyecto Supabase compartido con el CRM (`ldlflxujrjihiybrcree`) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Solo servidor, usada por el cron. Nunca prefijar con `NEXT_PUBLIC_` |
+| `ANTHROPIC_API_KEY` | Generación de contenido con Claude |
+| `CRON_SECRET` | Protege el endpoint del cron semanal (`Authorization: Bearer ...`) |
+| `LEONARDO_API_KEY` / `LEONARDO_MODEL_ID` | Generación de imágenes (Fase 2) |
+| `POSTIZ_API_KEY` / `POSTIZ_API_URL` | Publicación en RRSS (Fase 2.B). `POSTIZ_API_URL` solo hace falta si se autohospeda Postiz; vacío = Postiz Cloud |
+
+## Más documentación
+
+- `INTEGRATION.md` — arquitectura de la integración con Postiz (endpoints,
+  manejo de estado async, pasos pendientes) y plan de embebido futuro de este
+  módulo en el CRM `pessaro_CL`.
+- `meta_prompt_*.md` — especificación funcional completa de cada fase (Fase
+  1, Fase 2, Fase 2.B), tal como se le entregó a Claude Code para
+  construirlas.
+- `AGENTS.md` / `CLAUDE.md` — instrucciones para agentes de IA que trabajen
+  en este repo (hoy señalan que Next.js 16 tiene cambios respecto al
+  conocimiento de entrenamiento; conviene revisar `node_modules/next/dist/docs/`
+  antes de tocar rutas o convenciones nuevas).
